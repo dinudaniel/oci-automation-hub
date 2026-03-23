@@ -25,7 +25,7 @@ Using virtual clusters greatly improves the efficiency of resource usage, simpli
 
 1. Clone the terraform files from github.
 
-2. Use Oracle Resource Manager to create and apply the stack
+2. Use Oracle Resource Manager to create and apply the stack.
 
   - using the hamburger menu, go to Oracle Resource Manager
   - choose `Stacks`
