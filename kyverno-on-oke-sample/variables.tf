@@ -163,7 +163,7 @@ variable "gpu_np_shape" {
 
 variable "kubernetes_version" {
   type    = string
-  default = "1.34.2"
+  default = "v1.34.2"
 }
 
 variable "operator_allowed_cidrs" {
