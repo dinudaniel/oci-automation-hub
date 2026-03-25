@@ -2,15 +2,15 @@
 
 ## Getting started
 
-This stack will deploys an OKE cluster with one nodepool with one worker node to demonstrate how Kyverno works in OKE in OCI.
-In addition it will deploy 2 VM's, a bastion and an operator to be able to manage the cluster.
-The stack will install Kyverno as well and will copy a folder (_kyverno_) to operator
+This stack will deploy an OKE cluster with one nodepool with one worker node to demonstrate how Kyverno works in OKE in OCI.
+In addition it will deploy 2 VM's, a bastion VM and an operator VM to be able to manage the cluster.
+The stack will install Kyverno as well and will copy a folder (_kyverno_) to operator VM.
 
 ## How to deploy?
 
 ### Prerequisites
 
-- the account used to deploy the ORM stack must be part of a group that has the following permissions described [here](https://docs.oracle.com/en-us/iaas/Content/ContEng/Concepts/contengpolicyconfig.htm#policyforgroupsrequired)
+- The account used to deploy the ORM stack must be part of a group that has the following permissions described [here](https://docs.oracle.com/en-us/iaas/Content/ContEng/Concepts/contengpolicyconfig.htm#policyforgroupsrequired)
 
 
 ### Deploy via ORM:
@@ -21,8 +21,8 @@ The stack will install Kyverno as well and will copy a folder (_kyverno_) to ope
 - Configure the variables
 - Apply the stack
 - At the end you should see an output with bastion and operator IP's
-- these will be used to ssh to operator VM
-- you may use something like this in your ssh config file
+- These will be used to ssh to operator VM
+- You may use something like this in your ssh config file
 
 ```
 Host OKE-kyv-test1-oper
@@ -33,10 +33,10 @@ Host OKE-kyv-test1-oper
   HostKeyAlias OKE-kyv-test1-oper
 ```
 
-## how to run the demo
+## How to run the demo
 
-- connect to the operator vm
-- make sure Kyverno resources are installed. Run the below to check
+- Connect to the operator VM
+- Make sure Kyverno resources are installed. Run the below to check
 
 ```
 kubectl get all -n kyverno
@@ -71,22 +71,22 @@ replicaset.apps/kyverno-background-controller-7c7d4dbbc9   1         1         1
 replicaset.apps/kyverno-cleanup-controller-745cbc6f8d      1         1         1       19h
 replicaset.apps/kyverno-reports-controller-7867ffd654      1         1         1       19h
 ```
-**1. Demonstrate a validation policy**
+**1. Demonstrate how ValidatingPolicy works**
 
-- change directory to kyverno/01_validation
-- run the below to create a namespace _demo_ where we will test the policies
+- Change directory to kyverno/01_validation
+- Run the below to create a namespace _demo_ where we will test the policies
 ```
 kubectl apply -f namespace.yaml 
 ```
-- run the below to create a policy that will enforce deployments to have a number of 3 replicas and a label named _team_
+- Run the below to create a policy that will enforce deployments to have a number of 3 replicas and a label named _team_
 ```
 kubectl apply -f k_depl_rules_namespace.yaml 
 ```
-- check the policy
+- Check the policy
 ```
 kubectl get policies -n demo
 ```
-- you shoud see something like 
+- You shoud see something like 
 ```
 NAME                        ADMISSION   BACKGROUND   READY   AGE   MESSAGE
 validation-for-deployment   true        true         True    35s   Ready
@@ -108,7 +108,7 @@ validation-for-deployment:
     deployments. rule check-for-team-label failed at path /metadata/labels/team/'
 ```
 - Open the _depl.yaml_ file and change the number of replicas from 2 to 3
-- save the file an run again 
+- Save the file an run again 
 ```
 kubectl apply -f depl.yaml 
 ```
@@ -123,20 +123,20 @@ validation-for-deployment:
 ```
 
 - Open the file again and uncomment label team:  _team: frontend_
-- save the file and run the command below:
+- Save the file and run the command below:
 
 ```
 kubectl apply -f depl.yaml 
 ```
 
-- it should work fine now
-- you may check the depl if you want
+- It should work fine now
+- You may check the depl if you want
 
 ```
 kubectl get deployments -n demo
 ```
 
-- delete the deployment and the policy
+- Delete the deployment and the policy
 - Do not delete the namespace
 
 ```
@@ -144,70 +144,70 @@ kubectl delete -f k_depl_rules_namespace.yaml
 kubectl delete -f depl.yaml
 ```
 
-**2. Demonstrate a mutate policy**
+**2. Demonstrate how MutatingPolicy works**
 
-- this policy will mutate a resource by adding a label if does not exists
-- go to 02_mutate folder
-- run the below to create a cluster wide policy
+- This policy will mutate a resource by adding a label if does not exists
+- Go to 02_mutate folder
+- Run the below to create a cluster wide policy
 ```
 kubectl apply -f k_mutate.yaml 
 ```
-- check the policy
+- Check the policy
 ```
 kubectl get clusterpolicies 
 ```
-- now create the deployment. Mind there is no label named _team_ 
+- Now create the deployment. Mind there is no label named _team_ 
 ```
 kubectl apply -f depl.yaml 
 ```
-- check the deployment labels
+- Check the deployment labels
 ```
 kubectl get deployments --show-labels -n demo
 ```
-- you should see a label named _team_ was added
+- You should see a label named _team_ was added
 
 ```
 NAME               READY   UP-TO-DATE   AVAILABLE   AGE   LABELS
 nginx-deployment   2/2     2            2           27s   app=nginx,team=bravo
 ```
 
-- clean up
+- Clean up
 ```
 kubectl delete -f depl.yaml 
 kubectl delete -f k_mutate.yaml
 ```
-**3. Demonstrate a generate policy**
+**3. Demonstrate how GeneratingPolicy works** 
 
-- this policy will clone a secret every time a namespace is created. The secret will be cloned in the new namespace 
-- we need to create a role first as kyverno does not have privileges to create secrets.
-- change dir to 03_generate
-- run the below
+- This policy will clone a secret every time a namespace is created. The secret will be cloned in the new namespace 
+- We need to create a role first as Kyverno does not have privileges to create secrets.
+- Change dir to 03_generate
+- Run the below
 ```
 kubectl apply -f cluster_role.yaml
 ```
-- create a secret in the default namespace. This secret is being cloned by the policy when a new namespace will be created
+- Create a secret in the default namespace. This secret is being cloned by the policy when a new namespace will be created
 ```
 kubectl apply -f create_secret.yaml 
 kubectl get secrets -n default
 ```
 
-- create the kyverno policy
+- Create the Kyverno policy
 ```
 kubectl apply -f k_generate.yaml 
 ```
 
-- create a new namespace
+- Create a new namespace
 
 ```
 kubectl create ns demo1
 ```
 
-- as soon as this NS is created the secret _regcred_ will be created in the new namespace
+- As soon as this NS is created the secret _regcred_ will be created in the new namespace
 ```
 kubectl get secrets -n demo1
 ```
 
-- cleanup 
+- Cleanup 
 ```
 kubectl delete -f k_generate.yaml 
 kubectl delete secret regcred -n demo1
