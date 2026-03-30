@@ -44,7 +44,7 @@ Designed for multi-cloud and hybrid cloud use cases, Karmada provides turnkey au
 
 > **Note:** The following steps show how to deploy 3 OKE clusters and 1 VM that will be used during the demo
 
-1. Download the terraform files from github.
+1. Clone the terraform files from github.
 
 2. Use Oracle Resource Manager to create and apply the stack
 
