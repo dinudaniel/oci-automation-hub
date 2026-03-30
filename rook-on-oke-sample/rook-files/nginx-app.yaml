@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: my-app-pvc
+  namespace: default
+spec:
+  storageClassName: rook-ceph-block
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-app-pod
+  namespace: default
+spec:
+  restartPolicy: Always
+  containers:
+    - name: my-app-container
+      image: docker.io/library/nginx:1.27
+      imagePullPolicy: IfNotPresent
+      volumeMounts:
+        - mountPath: /data
+          name: my-app-storage
+  volumes:
+    - name: my-app-storage
+      persistentVolumeClaim:
+        claimName: my-app-pvc
