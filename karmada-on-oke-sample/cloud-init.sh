@@ -7,6 +7,7 @@ export OCI_CLI_AUTH=instance_principal
 cluster_id=$(curl -s -H "Authorization: Bearer Oracle" http://169.254.169.254/opc/v1/instance/metadata/cluster_id)
 cluster_id1=$(curl -s -H "Authorization: Bearer Oracle" http://169.254.169.254/opc/v1/instance/metadata/cluster_id1)
 cluster_id2=$(curl -s -H "Authorization: Bearer Oracle" http://169.254.169.254/opc/v1/instance/metadata/cluster_id2)
+REGION=$(curl -s -H "Authorization: Bearer Oracle" http://169.254.169.254/opc/v2/instance/region)
 #install OCI CLI
 /usr/bin/dnf -y install oraclelinux-developer-release-el9
 /usr/bin/dnf -y install python39-oci-cli
@@ -30,9 +31,9 @@ mkdir -p /root/.kube
 /usr/bin/echo "export PATH=$PATH:/usr/local/go/bin" >> /root/.bashrc
 
 #copy kubeconfig
-oci ce cluster create-kubeconfig --cluster-id "${cluster_id1}" --file /root/.kube/config-k1 --region us-ashburn-1 --token-version 2.0.0  --kube-endpoint PUBLIC_ENDPOINT --auth instance_principal
-oci ce cluster create-kubeconfig --cluster-id "${cluster_id2}" --file /root/.kube/config-k2 --region us-ashburn-1 --token-version 2.0.0  --kube-endpoint PUBLIC_ENDPOINT --auth instance_principal
-oci ce cluster create-kubeconfig --cluster-id "${cluster_id}" --file /root/.kube/config --region us-ashburn-1 --token-version 2.0.0  --kube-endpoint PUBLIC_ENDPOINT --auth instance_principal
+oci ce cluster create-kubeconfig --cluster-id "${cluster_id1}" --file /root/.kube/config-k1 --region ${REGION} --token-version 2.0.0  --kube-endpoint PUBLIC_ENDPOINT --auth instance_principal
+oci ce cluster create-kubeconfig --cluster-id "${cluster_id2}" --file /root/.kube/config-k2 --region ${REGION} --token-version 2.0.0  --kube-endpoint PUBLIC_ENDPOINT --auth instance_principal
+oci ce cluster create-kubeconfig --cluster-id "${cluster_id}" --file /root/.kube/config --region ${REGION} --token-version 2.0.0  --kube-endpoint PUBLIC_ENDPOINT --auth instance_principal
 
 #change context names
 K=$(KUBECONFIG=/root/.kube/config kubectl config current-context)
