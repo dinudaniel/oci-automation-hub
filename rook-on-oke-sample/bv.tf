@@ -17,7 +17,7 @@ locals {
 
 # Read the node pool so we can get the instances (worker nodes) it created
 data "oci_containerengine_node_pool" "np" {
-  node_pool_id = oci_containerengine_node_pool.this.id
+  node_pool_id = module.oke.worker_pool_ids["simple-np"]
 }
 
 # Build a map instance_id => availability_domain for convenience
