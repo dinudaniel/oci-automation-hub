@@ -9,7 +9,7 @@ locals {
 }
 
 module "oke" {
-  source  = "oracle-terraform-modules/oke/oci"
+  source  = "github.com/oracle-terraform-modules/terraform-oci-oke"
   create_iam_operator_policy = "always"
   create_iam_resources = var.create_iam_resources
 

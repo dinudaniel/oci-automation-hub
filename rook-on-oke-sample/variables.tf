@@ -23,7 +23,7 @@ variable "bastion_image_os" {
 
 variable "bastion_image_os_version" {
   type    = string
-  default = "8"
+  default = "9"
 }
 
 variable "bastion_image_type" {
@@ -163,7 +163,7 @@ variable "create_vcn" {
 
 variable "kubernetes_version" {
   type    = string
-  default = "v1.29.1"
+  default = "v1.34.2"
 }
 
 variable "operator_allowed_cidrs" {
@@ -178,7 +178,7 @@ variable "operator_image_os" {
 
 variable "operator_image_os_version" {
   type    = string
-  default = "8"
+  default = "9"
 }
 
 variable "operator_image_type" {

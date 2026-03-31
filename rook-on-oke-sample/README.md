@@ -33,11 +33,12 @@ The repository is structured as a Terraform project that installs Rook using its
 
 2.  **Create a `terraform.auto.tfvars` file and add the following variables:**
     ```tfvars
-    tenancy_ocid     = "ocid1.tenancy.oc1..your_tenancy_ocid"
-    user_ocid        = "ocid1.user.oc1..your_user_ocid"
-    fingerprint      = "your_api_key_fingerprint"
-    private_key_path = "/path/to/your/oci_api_key.pem"
-    region           = "your-oci-region"
+    tenancy_ocid      = "ocid1.tenancy.oc1..your_tenancy_ocid"
+    current_user_ocid = "ocid1.user.oc1..your_user_ocid"
+    compartment_ocid  =
+    # fingerprint      = "your_api_key_fingerprint"
+    # private_key_path = "/path/to/your/oci_api_key.pem"
+    region            = "your-oci-region"
     ```
 
 3.  **Initialize Terraform:**
