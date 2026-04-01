@@ -212,7 +212,7 @@ variable "simple_np_flex_shape" {
 
 variable "simple_np_size" {
   type    = number
-  default = 1
+  default = 3
 }
 
 variable "ssh_public_key" {

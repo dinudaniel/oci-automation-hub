@@ -11,7 +11,8 @@ locals {
 module "oke" {
   source  = "github.com/oracle-terraform-modules/terraform-oci-oke"
   create_iam_operator_policy = "always"
-  create_iam_resources = var.create_iam_resources
+  create_iam_resources       = var.create_iam_resources
+  create_iam_tag_namespace   = var.create_iam_tag_namespace
 
 allow_rules_workers = {
     "Allow TCP ingress to workers for SSL traffic from anywhere" : {
@@ -29,11 +30,15 @@ allow_rules_workers = {
   ssh_private_key = tls_private_key.stack_key.private_key_openssh
   ssh_public_key  = local.bundled_ssh_public_keys
   bastion_allowed_cidrs    = var.bastion_allowed_cidrs
+  bastion_image_os         = var.bastion_image_os
+  bastion_image_os_version = var.bastion_image_os_version
   bastion_image_type       = var.bastion_image_type
-  bastion_shape = { "boot_volume_size": 50, "memory": 4, "ocpus": 1, "shape": "VM.Standard.E5.Flex" }
+  bastion_shape = { "boot_volume_size": 50, "memory": 4, "ocpus": 1, "shape": "VM.Standard.E3.Flex" }
   # Operator variables
+  operator_image_os                  = var.operator_image_os
+  operator_image_os_version          = var.operator_image_os_version
   operator_image_type                = var.operator_image_type
-  operator_shape = { "boot_volume_size": 50, "memory": 4, "ocpus": 1, "shape": "VM.Standard.E5.Flex" }
+  operator_shape = { "boot_volume_size": 50, "memory": 4, "ocpus": 1, "shape": "VM.Standard.E3.Flex" }
   # Network variables
   create_vcn               = var.create_vcn
   vcn_name                 = var.vcn_name   # Ignored if create_vcn = false
