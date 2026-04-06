@@ -1,5 +1,6 @@
 # OKE Custom Node OS
-Copyright (c) 2026 Oracle and/or its affiliates. All rights reserved.
+Copyright (c) 2024, 2026, Oracle and/or its affiliates. All rights reserved.
+The Universal Permissive License (UPL), Version 1.0 as shown at https://oss.oracle.com/licenses/upl/
 
 ## Objective
 Enable a custom RHEL-based Linux Image ready for use with OKE Node Pools. 
