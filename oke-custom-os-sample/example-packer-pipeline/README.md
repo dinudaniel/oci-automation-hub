@@ -1,6 +1,7 @@
-# OKE Custom Node OS - Example Packer Pipeline
 Copyright (c) 2024, 2026, Oracle and/or its affiliates. All rights reserved.
 The Universal Permissive License (UPL), Version 1.0 as shown at https://oss.oracle.com/licenses/upl/
+# OKE Custom Node OS - Example Packer Pipeline
+
 
 All commands run from this directory: packer-test
 
