@@ -1,0 +1,74 @@
+# Copyright (c) 2024, 2026, Oracle and/or its affiliates. All rights reserved.
+# The Universal Permissive License (UPL), Version 1.0 as shown at https://oss.oracle.com/licenses/upl/
+
+# =============================================================================
+# terraform.tfvars.example
+# =============================================================================
+# Copy this file to terraform.tfvars and fill in required values.
+# When using OCI Resource Manager, these are configured via the UI form
+# defined in schema.yaml — you do NOT need this file for RM stacks.
+# =============================================================================
+
+# --- Required (populated automatically by Resource Manager) ---
+# tenancy_ocid     = "ocid1.tenancy.oc1..aaaa..."
+# compartment_ocid = "ocid1.compartment.oc1..aaaa..."
+# region           = "eu-frankfurt-1"
+
+# --- General ---
+resource_name_prefix = "myproject"
+
+# --- Network ---
+vcn_cidr_block    = "10.0.0.0/16"
+vcn_dns_label     = "myvcn"
+subnet_cidr_block = "10.0.1.0/24"
+subnet_dns_label  = "compute"
+subnet_is_public  = true
+nsg_rules         = "ssh_and_http"   # ssh_only | ssh_and_http | ssh_http_https | all_open | none
+
+# --- Compute ---
+instance_count               = 2
+instance_shape               = "VM.Standard.E4.Flex"
+instance_flex_ocpus          = 2
+instance_flex_memory_in_gbs  = 16
+# instance_image_ocid        = "ocid1.image.oc1..aaaa..."   # Required — pick from RM dropdown
+instance_boot_volume_size_in_gbs = 50
+# ssh_public_key             = "ssh-rsa AAAA..."             # Required
+assign_public_ip             = true
+cloud_init_script            = ""
+
+# --- Block Volumes ---
+create_block_volumes         = false    # Set to true for FIO benchmarks
+block_volume_size_in_gbs     = 50       # 50 GB minimum
+block_volume_vpus_per_gb     = 10       # 0=Lower Cost, 10=Balanced, 20=Higher Perf, 30-120=Ultra High
+block_volume_attachment_type = "paravirtualized"  # paravirtualized | iscsi
+
+# --- Benchmark (General) ---
+run_benchmark                = true
+benchmark_run_id             = "1"       # Increment to re-run: 1 → 2 → 3
+# ssh_private_key_secret_ocid = "ocid1.vaultsecret.oc1..aaaa..."  # Recommended: Vault secret containing PEM key
+# ssh_private_key            = ""        # Fallback: paste PEM content directly (less secure)
+
+# --- Benchmark: Sysbench (CPU / Memory) ---
+run_sysbench                 = true
+sysbench_threads             = 0         # 0 = auto-detect (all CPUs)
+sysbench_cpu_max_prime       = 20000     # 10000=quick, 20000=standard, 50000=heavy, 100000=extreme
+sysbench_duration            = 30        # seconds
+sysbench_events              = 0         # 0 = unlimited (use duration)
+run_memory_benchmark         = false
+sysbench_memory_block_size   = "1K"
+sysbench_memory_total_size   = "10G"
+
+# --- Benchmark: FIO (Storage I/O) --- requires create_block_volumes = true
+run_fio                      = false
+fio_test_pattern             = "randrw"  # randread | randwrite | randrw | read | write
+fio_block_size               = "4k"      # 4k (IOPS) | 1m (throughput)
+fio_io_depth                 = 64
+fio_num_jobs                 = 0         # 0 = auto-detect (all CPUs)
+fio_duration                 = 60        # seconds
+fio_file_size                = "4G"
+fio_rwmixread                = 70        # % reads (only for randrw)
+fio_direct                   = true      # direct I/O (bypass OS cache)
+
+# --- IAM ---
+create_dynamic_group         = true      # false if dynamic group already exists
+create_policy                = true      # false if policy already exists

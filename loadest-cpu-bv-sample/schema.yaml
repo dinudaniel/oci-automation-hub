@@ -1,0 +1,739 @@
+# Copyright (c) 2024, 2026, Oracle and/or its affiliates. All rights reserved.
+# The Universal Permissive License (UPL), Version 1.0 as shown at https://oss.oracle.com/licenses/upl/
+
+title: "VCN and Compute Stack with CPU & Storage Benchmarks"
+description: "Deploy a Virtual Cloud Network with configurable compute instances and block volumes, then run sysbench CPU and FIO storage benchmarks via OCI Resource Manager."
+schemaVersion: 1.1.0
+version: "3.0.0"
+locale: "en"
+
+variableGroups:
+  - title: "General Configuration"
+    visible: true
+    variables:
+      - compartment_ocid
+      - region
+      - resource_name_prefix
+
+  - title: "Network Configuration"
+    visible: true
+    variables:
+      - vcn_cidr_block
+      - vcn_dns_label
+      - subnet_cidr_block
+      - subnet_dns_label
+      - subnet_is_public
+      - nsg_rules
+
+  - title: "Compute Configuration"
+    visible: true
+    variables:
+      - instance_count
+      - instance_shape
+      - instance_flex_ocpus
+      - instance_flex_memory_in_gbs
+      - instance_image_ocid
+      - instance_boot_volume_size_in_gbs
+      - ssh_public_key
+      - assign_public_ip
+      - cloud_init_script
+
+  - title: "Block Volume Configuration"
+    visible: true
+    variables:
+      - create_block_volumes
+      - block_volume_size_in_gbs
+      - block_volume_vpus_per_gb
+      - block_volume_attachment_type
+
+  - title: "Benchmark — General"
+    visible: true
+    variables:
+      - run_benchmark
+      - benchmark_run_id
+      - ssh_private_key_secret_ocid
+      - ssh_private_key
+
+  - title: "Benchmark — Sysbench (CPU / Memory)"
+    visible: run_benchmark
+    variables:
+      - run_sysbench
+      - sysbench_threads
+      - sysbench_cpu_max_prime
+      - sysbench_duration
+      - sysbench_events
+      - run_memory_benchmark
+      - sysbench_memory_block_size
+      - sysbench_memory_total_size
+
+  - title: "Benchmark — FIO (Storage I/O)"
+    visible:
+      and:
+        - run_benchmark
+        - create_block_volumes
+    variables:
+      - run_fio
+      - fio_test_pattern
+      - fio_block_size
+      - fio_io_depth
+      - fio_num_jobs
+      - fio_duration
+      - fio_file_size
+      - fio_rwmixread
+      - fio_direct
+
+  - title: "IAM Configuration"
+    visible: run_benchmark
+    variables:
+      - create_dynamic_group
+      - create_policy
+
+  - title: "Hidden"
+    visible: false
+    variables:
+      - tenancy_ocid
+      - current_user_ocid
+
+variables:
+  # =========================================================================
+  # General
+  # =========================================================================
+  compartment_ocid:
+    type: oci:identity:compartment:id
+    title: "Compartment"
+    description: "Select the compartment to deploy resources into."
+    required: true
+
+  region:
+    type: oci:identity:region:name
+    title: "Region"
+    description: "Select the OCI region."
+    required: true
+
+  resource_name_prefix:
+    type: string
+    title: "Resource Name Prefix"
+    description: "Prefix for all resource names (e.g., 'myproject')."
+    default: "rmstack"
+    required: true
+    pattern: "^[a-zA-Z][a-zA-Z0-9\\-]{0,19}$"
+
+  # =========================================================================
+  # Network
+  # =========================================================================
+  vcn_cidr_block:
+    type: string
+    title: "VCN CIDR Block"
+    description: "CIDR block for the VCN."
+    default: "10.0.0.0/16"
+    required: true
+    pattern: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/([0-9]|[1-2][0-9]|3[0-2]))$"
+
+  vcn_dns_label:
+    type: string
+    title: "VCN DNS Label"
+    description: "DNS label for the VCN (alphanumeric, max 15 chars)."
+    default: "rmvcn"
+    required: true
+    pattern: "^[a-zA-Z][a-zA-Z0-9]{0,14}$"
+
+  subnet_cidr_block:
+    type: string
+    title: "Subnet CIDR Block"
+    description: "CIDR block for the compute subnet."
+    default: "10.0.1.0/24"
+    required: true
+
+  subnet_dns_label:
+    type: string
+    title: "Subnet DNS Label"
+    description: "DNS label for the subnet."
+    default: "compute"
+    required: true
+    pattern: "^[a-zA-Z][a-zA-Z0-9]{0,14}$"
+
+  subnet_is_public:
+    type: boolean
+    title: "Public Subnet"
+    description: "Whether the subnet should be public (with internet gateway) or private (with NAT gateway)."
+    default: true
+
+  nsg_rules:
+    type: enum
+    title: "Network Security Group Rules"
+    description: "Predefined NSG rule sets to apply."
+    enum:
+      - "ssh_only"
+      - "ssh_and_http"
+      - "ssh_http_https"
+      - "all_open"
+      - "none"
+    default: "ssh_and_http"
+    required: true
+
+  # =========================================================================
+  # Compute
+  # =========================================================================
+  instance_count:
+    type: integer
+    title: "Number of Instances"
+    description: "How many compute instances to deploy (0 to remove all)."
+    minimum: 0
+    maximum: 20
+    default: 1
+    required: true
+
+  instance_shape:
+    type: oci:core:instanceshape:name
+    title: "Instance Shape"
+    description: "Compute shape for the instances."
+    required: true
+    dependsOn:
+      compartmentId: compartment_ocid
+
+  instance_flex_ocpus:
+    type: integer
+    title: "Flex Shape OCPUs"
+    description: "Number of OCPUs for flex shapes (ignored for fixed shapes)."
+    minimum: 1
+    maximum: 128
+    default: 1
+    visible:
+      or:
+        - eq:
+          - instance_shape
+          - "VM.Standard.E4.Flex"
+        - eq:
+          - instance_shape
+          - "VM.Standard.E5.Flex"
+        - eq:
+          - instance_shape
+          - "VM.Standard3.Flex"
+        - eq:
+          - instance_shape
+          - "VM.Standard.A1.Flex"
+        - eq:
+          - instance_shape
+          - "VM.Optimized3.Flex"
+        - eq:
+          - instance_shape
+          - "VM.Standard.A2.Flex"
+
+  instance_flex_memory_in_gbs:
+    type: integer
+    title: "Flex Shape Memory (GB)"
+    description: "Amount of memory in GB for flex shapes."
+    minimum: 1
+    maximum: 1024
+    default: 16
+    visible:
+      or:
+        - eq:
+          - instance_shape
+          - "VM.Standard.E4.Flex"
+        - eq:
+          - instance_shape
+          - "VM.Standard.E5.Flex"
+        - eq:
+          - instance_shape
+          - "VM.Standard3.Flex"
+        - eq:
+          - instance_shape
+          - "VM.Standard.A1.Flex"
+        - eq:
+          - instance_shape
+          - "VM.Optimized3.Flex"
+        - eq:
+          - instance_shape
+          - "VM.Standard.A2.Flex"
+
+  instance_image_ocid:
+    type: oci:core:image:id
+    title: "Instance Image"
+    description: "OS image for the instances."
+    required: true
+    dependsOn:
+      compartmentId: compartment_ocid
+      shape: instance_shape
+
+  instance_boot_volume_size_in_gbs:
+    type: integer
+    title: "Boot Volume Size (GB)"
+    description: "Size of the boot volume in GB."
+    minimum: 50
+    maximum: 32768
+    default: 50
+    required: true
+
+  ssh_public_key:
+    type: oci:core:ssh:publickey
+    title: "SSH Public Key"
+    description: "Public SSH key for instance access."
+    required: true
+
+  assign_public_ip:
+    type: boolean
+    title: "Assign Public IP"
+    description: "Assign a public IP address to each instance."
+    default: true
+    visible: subnet_is_public
+
+  cloud_init_script:
+    type: text
+    title: "Cloud-Init Script (optional)"
+    description: "Optional cloud-init user data script to run on instance launch (base64 will be applied automatically)."
+    required: false
+    default: ""
+
+  # =========================================================================
+  # Block Volumes
+  # =========================================================================
+  create_block_volumes:
+    type: boolean
+    title: "Create Block Volumes"
+    description: "Create and attach a block volume to each compute instance. Required for FIO storage benchmarks."
+    default: false
+
+  block_volume_size_in_gbs:
+    type: integer
+    title: "Block Volume Size (GB)"
+    description: "Size of each block volume in GB."
+    minimum: 50
+    maximum: 32768
+    default: 50
+    visible: create_block_volumes
+
+  block_volume_vpus_per_gb:
+    type: enum
+    title: "Block Volume Performance (VPUs/GB)"
+    description: "Volume performance units per GB. Higher values = better IOPS and throughput."
+    enum:
+      - "0"
+      - "10"
+      - "20"
+      - "30"
+      - "40"
+      - "50"
+      - "60"
+      - "70"
+      - "80"
+      - "90"
+      - "100"
+      - "110"
+      - "120"
+    default: "10"
+    visible: create_block_volumes
+
+  block_volume_attachment_type:
+    type: enum
+    title: "Attachment Type"
+    description: "Block volume attachment type. Paravirtualized is simpler; iSCSI offers more control."
+    enum:
+      - "paravirtualized"
+      - "iscsi"
+    default: "paravirtualized"
+    visible: create_block_volumes
+
+  # =========================================================================
+  # Benchmark — General
+  # =========================================================================
+  run_benchmark:
+    type: boolean
+    title: "Enable Benchmarks"
+    description: "Run benchmarks on each instance during apply. Results appear in the apply logs, outputs, and OCI Logging."
+    default: true
+
+  benchmark_run_id:
+    type: string
+    title: "Benchmark Run ID"
+    description: "Change this value (e.g., 1 → 2 → 3) to force a new benchmark run on the next apply, even if instances haven't changed."
+    default: "1"
+    required: true
+    visible: run_benchmark
+
+  ssh_private_key_secret_ocid:
+    type: oci:kms:secret:id
+    title: "SSH Private Key — Vault Secret (Recommended)"
+    description: "Select an OCI Vault secret containing the SSH private key in PEM format. This is the secure method — the key is retrieved at apply time and never stored in stack variables."
+    required: false
+    visible: run_benchmark
+    dependsOn:
+      compartmentId: compartment_ocid
+
+  ssh_private_key:
+    type: password
+    title: "SSH Private Key — Direct Paste (Fallback)"
+    description: "Only used if no Vault secret is selected above. Paste the PEM private key directly. Less secure — prefer the Vault method."
+    required: false
+    sensitive: true
+    visible:
+      and:
+        - run_benchmark
+        - eq:
+          - ssh_private_key_secret_ocid
+          - ""
+
+  # =========================================================================
+  # Benchmark — Sysbench (CPU / Memory)
+  # =========================================================================
+  run_sysbench:
+    type: boolean
+    title: "Run Sysbench CPU Benchmark"
+    description: "Run a sysbench CPU benchmark on each instance."
+    default: true
+    visible: run_benchmark
+
+  sysbench_threads:
+    type: integer
+    title: "Benchmark Threads"
+    description: "Number of CPU threads to benchmark. Set to 0 to auto-detect and use all available CPUs."
+    minimum: 0
+    maximum: 256
+    default: 0
+    visible:
+      and:
+        - run_benchmark
+        - run_sysbench
+
+  sysbench_cpu_max_prime:
+    type: enum
+    title: "CPU Max Prime"
+    description: "Upper limit for prime number generation — controls workload intensity."
+    enum:
+      - "10000"
+      - "20000"
+      - "50000"
+      - "100000"
+      - "500000"
+    default: "20000"
+    visible:
+      and:
+        - run_benchmark
+        - run_sysbench
+
+  sysbench_duration:
+    type: integer
+    title: "Benchmark Duration (seconds)"
+    description: "How long to run the CPU benchmark. Longer durations give more stable results."
+    minimum: 5
+    maximum: 300
+    default: 30
+    visible:
+      and:
+        - run_benchmark
+        - run_sysbench
+
+  sysbench_events:
+    type: integer
+    title: "Max Events (0 = unlimited)"
+    description: "Maximum number of prime-computation events. 0 means use duration limit instead."
+    minimum: 0
+    maximum: 10000000
+    default: 0
+    visible:
+      and:
+        - run_benchmark
+        - run_sysbench
+
+  run_memory_benchmark:
+    type: boolean
+    title: "Also Run Memory Benchmark"
+    description: "Run an additional sysbench memory bandwidth test after the CPU benchmark."
+    default: false
+    visible:
+      and:
+        - run_benchmark
+        - run_sysbench
+
+  sysbench_memory_block_size:
+    type: enum
+    title: "Memory Block Size"
+    description: "Block size for memory read/write operations."
+    enum:
+      - "1K"
+      - "4K"
+      - "8K"
+      - "1M"
+    default: "1K"
+    visible:
+      and:
+        - run_benchmark
+        - run_sysbench
+        - run_memory_benchmark
+
+  sysbench_memory_total_size:
+    type: enum
+    title: "Memory Total Transfer Size"
+    description: "Total amount of data to transfer during the memory benchmark."
+    enum:
+      - "1G"
+      - "10G"
+      - "50G"
+      - "100G"
+    default: "10G"
+    visible:
+      and:
+        - run_benchmark
+        - run_sysbench
+        - run_memory_benchmark
+
+  # =========================================================================
+  # Benchmark — FIO (Storage I/O)
+  # =========================================================================
+  run_fio:
+    type: boolean
+    title: "Run FIO Storage Benchmark"
+    description: "Run FIO storage I/O benchmark on each instance's block volume."
+    default: false
+    visible:
+      and:
+        - run_benchmark
+        - create_block_volumes
+
+  fio_test_pattern:
+    type: enum
+    title: "I/O Test Pattern"
+    description: "The type of I/O workload to simulate."
+    enum:
+      - "randread"
+      - "randwrite"
+      - "randrw"
+      - "read"
+      - "write"
+    default: "randrw"
+    visible:
+      and:
+        - run_benchmark
+        - create_block_volumes
+        - run_fio
+
+  fio_block_size:
+    type: enum
+    title: "I/O Block Size"
+    description: "Block size for I/O operations. 4k is typical for database workloads, 1m for throughput tests."
+    enum:
+      - "4k"
+      - "8k"
+      - "16k"
+      - "64k"
+      - "128k"
+      - "256k"
+      - "512k"
+      - "1m"
+    default: "4k"
+    visible:
+      and:
+        - run_benchmark
+        - create_block_volumes
+        - run_fio
+
+  fio_io_depth:
+    type: integer
+    title: "I/O Depth"
+    description: "Number of I/O units to keep in flight. Higher values improve throughput on high-performance volumes."
+    minimum: 1
+    maximum: 1024
+    default: 64
+    visible:
+      and:
+        - run_benchmark
+        - create_block_volumes
+        - run_fio
+
+  fio_num_jobs:
+    type: integer
+    title: "Number of Jobs"
+    description: "Number of parallel FIO workers. Set to 0 to auto-detect (use all available CPUs)."
+    minimum: 0
+    maximum: 256
+    default: 0
+    visible:
+      and:
+        - run_benchmark
+        - create_block_volumes
+        - run_fio
+
+  fio_duration:
+    type: integer
+    title: "FIO Duration (seconds)"
+    description: "How long to run the FIO benchmark."
+    minimum: 5
+    maximum: 3600
+    default: 60
+    visible:
+      and:
+        - run_benchmark
+        - create_block_volumes
+        - run_fio
+
+  fio_file_size:
+    type: enum
+    title: "Test File Size"
+    description: "Size of the test file. Should be large enough to avoid caching effects."
+    enum:
+      - "1G"
+      - "2G"
+      - "4G"
+      - "8G"
+      - "16G"
+    default: "4G"
+    visible:
+      and:
+        - run_benchmark
+        - create_block_volumes
+        - run_fio
+
+  fio_rwmixread:
+    type: integer
+    title: "Read/Write Mix (% reads)"
+    description: "Percentage of reads in mixed workload (only used with randrw pattern)."
+    minimum: 0
+    maximum: 100
+    default: 70
+    visible:
+      and:
+        - run_benchmark
+        - create_block_volumes
+        - run_fio
+        - eq:
+          - fio_test_pattern
+          - "randrw"
+
+  fio_direct:
+    type: boolean
+    title: "Direct I/O"
+    description: "Use direct I/O (O_DIRECT), bypassing OS page cache. Recommended for accurate storage benchmarks."
+    default: true
+    visible:
+      and:
+        - run_benchmark
+        - create_block_volumes
+        - run_fio
+
+  # =========================================================================
+  # IAM Configuration
+  # =========================================================================
+  create_dynamic_group:
+    type: boolean
+    title: "Create Dynamic Group"
+    description: "Create a Dynamic Group for benchmark instances to authenticate via Instance Principal. Disable if one already exists in your tenancy."
+    default: true
+    visible: run_benchmark
+
+  create_policy:
+    type: boolean
+    title: "Create IAM Policy"
+    description: "Create an IAM Policy allowing instances to push benchmark results to OCI Logging. Disable if the policy already exists."
+    default: true
+    visible: run_benchmark
+
+  # =========================================================================
+  # Hidden (auto-populated by Resource Manager)
+  # =========================================================================
+  tenancy_ocid:
+    type: string
+    title: "Tenancy OCID"
+    visible: false
+
+  current_user_ocid:
+    type: string
+    title: "Current User OCID"
+    visible: false
+
+outputs:
+  vcn_id:
+    title: "VCN OCID"
+    type: ocid
+    visible: true
+
+  subnet_id:
+    title: "Subnet OCID"
+    type: ocid
+    visible: true
+
+  instance_ids:
+    title: "Instance OCIDs"
+    type: string
+    visible: true
+
+  instance_private_ips:
+    title: "Private IP Addresses"
+    type: string
+    visible: true
+
+  instance_public_ips:
+    title: "Public IP Addresses"
+    type: string
+    visible: true
+
+  block_volume_ids:
+    title: "Block Volume OCIDs"
+    type: string
+    visible: true
+
+  block_volume_attachment_ids:
+    title: "Block Volume Attachment OCIDs"
+    type: string
+    visible: true
+
+  benchmark_summary:
+    title: "Sysbench Benchmark Summary"
+    type: string
+    visible: true
+
+  benchmark_log_group_id:
+    title: "Benchmark Log Group OCID"
+    type: ocid
+    visible: true
+
+  benchmark_log_id:
+    title: "Sysbench Log OCID"
+    type: ocid
+    visible: true
+
+  fio_benchmark_summary:
+    title: "FIO Benchmark Summary"
+    type: string
+    visible: true
+
+  fio_log_id:
+    title: "FIO Log OCID"
+    type: ocid
+    visible: true
+
+  benchmark_log_search_url:
+    title: "Log Search URL"
+    type: link
+    visible: true
+
+outputGroups:
+  - title: "Network"
+    outputs:
+      - vcn_id
+      - subnet_id
+
+  - title: "Compute Instances"
+    outputs:
+      - instance_ids
+      - instance_private_ips
+      - instance_public_ips
+
+  - title: "Block Volumes"
+    outputs:
+      - block_volume_ids
+      - block_volume_attachment_ids
+
+  - title: "Benchmark — Sysbench"
+    outputs:
+      - benchmark_summary
+      - benchmark_log_id
+
+  - title: "Benchmark — FIO"
+    outputs:
+      - fio_benchmark_summary
+      - fio_log_id
+
+  - title: "Benchmark — Logging"
+    outputs:
+      - benchmark_log_group_id
+      - benchmark_log_search_url
