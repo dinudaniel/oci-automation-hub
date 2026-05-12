@@ -25,10 +25,6 @@ This Terraform stack provisions an OKE cluster and installs Litmus Chaos on it b
   allow group <group-name> to manage orm-stacks in compartment <compartment-name>
   allow group <group-name> to manage orm-jobs in compartment <compartment-name>
   allow group <group-name> to manage cluster-family in compartment <compartment-name>
-  allow group <group-name> to manage virtual-network-family in compartment <compartment-name>
-  allow group <group-name> to manage load-balancers in compartment <compartment-name>
-  allow group <group-name> to manage instance-family in compartment <compartment-name>
-  allow group <group-name> to manage volume-family in compartment <compartment-name>
   ```
 
 - SSH public key. The ORM stack schema requires this input.
