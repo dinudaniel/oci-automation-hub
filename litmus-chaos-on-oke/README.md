@@ -98,20 +98,11 @@ The following example deploys an `nginx` workload and runs a pod-delete chaos ex
 
 1. Generate a kubeconfig for the OKE cluster from OCI Cloud Shell or a workstation with OCI CLI configured.
 
-   Find the cluster OCID in the OCI Console under **Developer Services** > **Kubernetes Clusters (OKE)** > `litmus`, then run:
+   Find the cluster OCID in the OCI Console under **Developer Services** > **Kubernetes Clusters (OKE)** > `litmus`.
+   On this page click **Actions** > **Access cluster** and choose the way you want to connect (cloud shell or local machine)
 
-   ```bash
-   oci ce cluster create-kubeconfig \
-     --cluster-id <litmus-cluster-ocid> \
-     --file $HOME/.kube/config \
-     --region <region> \
-     --token-version 2.0.0 \
-     --kube-endpoint PUBLIC_ENDPOINT
 
-   export KUBECONFIG=$HOME/.kube/config
-   ```
-
-2. Create a sample workload:
+3. Create a sample workload:
 
    ```bash
    kubectl create namespace chaos-demo
@@ -120,7 +111,7 @@ The following example deploys an `nginx` workload and runs a pod-delete chaos ex
    kubectl -n chaos-demo get pods -l app=nginx
    ```
 
-3. In the Litmus portal, create and run a pod-delete experiment:
+4. In the Litmus portal, create and run a pod-delete experiment:
 
    - Open the Litmus project.
    - Choose the OKE chaos infrastructure or agent.
@@ -130,7 +121,7 @@ The following example deploys an `nginx` workload and runs a pod-delete chaos ex
    - Use a short duration for the first run, for example 30 seconds.
    - Start the experiment.
 
-4. Watch the workload while the experiment runs:
+5. Watch the workload while the experiment runs:
 
    ```bash
    kubectl -n chaos-demo get pods -w
