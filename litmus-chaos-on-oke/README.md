@@ -119,14 +119,14 @@ The following example deploys an `nginx` workload and runs a pod-delete chaos ex
    - Click `New probe`
    - Select `Command probe` as the type
    - Configure the probe as follows:
-       Name: `nginx-probe`
-       Timeout: 10s
-       Interval: 1s
-       Attempt: 1
-       Command: `kubectl get pods -n chaos-demo | grep nginx | grep Running | wc -l`
-       Type: Int
-       Comparison Criteria: >
-       Value: 2
+       - Name: `nginx-probe`
+       - Timeout: 10s
+       - Interval: 1s
+       - Attempt: 1
+       - Command: `kubectl get pods -n chaos-demo | grep nginx | grep Running | wc -l`
+       - Type: Int
+       - Comparison Criteria: >
+       - Value: 2
 2. In the ChaosCenter dashboard, create and run a pod-delete experiment:
 
    - Open the Litmus project.
