@@ -109,7 +109,7 @@ The following example deploys an `nginx` workload and runs a pod-delete chaos ex
 
    ```bash
    kubectl create namespace chaos-demo
-   kubectl -n chaos-demo create deployment nginx --image=nginx --replicas=3
+   kubectl -n chaos-demo create deployment nginx --image=docker.io/nginx --replicas=3
    kubectl -n chaos-demo expose deployment nginx --port=80
    kubectl -n chaos-demo get pods -l app=nginx
    ```
