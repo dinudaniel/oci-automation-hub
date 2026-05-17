@@ -94,10 +94,10 @@ This Terraform stack provisions an OKE cluster and installs Litmus Chaos on it b
      Find the cluster in the OCI Console under **Developer Services** > **Kubernetes Clusters (OKE)** > `litmus`.
      On this page click **Actions** > **Access cluster** and choose the way you want to connect (cloud shell or local machine).
    - In LitmusChaos portal enable chaos, e.g.:
-     Name: local
-     Chaos Components Installation: Cluster-wide access
-     Installation Location (Namespace): litmus
-     Service Account Name: litmus
+     - Name: local
+     - Chaos Components Installation: Cluster-wide access
+     - Installation Location (Namespace): litmus
+     - Service Account Name: litmus
    - download the yaml file and apply it; in ChaosCenter dashboard wait for the cluster to become `CONNECTED`
 
 ## Task 3: Run a basic chaos experiment
